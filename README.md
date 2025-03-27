@@ -38,40 +38,27 @@ The analyzer focuses on detecting patterns that are incompatible with PolkaVM's 
 pip install semgrep
 
 # Clone this repository
-git clone https://github.com/yourusername/gosmart-lint.git
+git clone https://github.com/dutragustavo/gosmart-lint.git
 cd gosmart-lint
 
 # Run against example code
-semgrep --config rules/determinism.yaml examples/bad/
-
-# Run all tests
-./scripts/run_tests.sh
+semgrep --config go-threading.yaml main.go
 
 ```
 
 ## Example Detection
 
 ```go
-// This code would be flagged as incompatible with PolkaVM:
-func processInParallel(items []string) {
-    var wg sync.WaitGroup
-    for _, item := range items {
-        wg.Add(1)
-        go func(i string) {
-            defer wg.Done()
-            process(i)
-        }(item)
-    }
-    wg.Wait()
-}
+// This code would be flagged as incompatible with PVM:
+package main
 
-// The compatible alternative:
-func processSequentially(items []string) {
-    for _, item := range items {
-        process(item)
-    }
-}
+import "fmt"
 
+func main() {
+    ch := make(chan string)
+    go func() { ch <- "Hello from another thread!" }()
+    fmt.Println(<-ch)
+}
 ```
 
 ## Value Proposition
@@ -93,17 +80,24 @@ func processSequentially(items []string) {
 Set up the tool and run it against your own Go code with:
 
 ```yaml
-name: PolkaVM Compatibility Check
-on: [push, pull_request]
-jobs:
-  semgrep:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: returntocorp/semgrep-action@v1
-        with:
-          config: https://raw.githubusercontent.com/yourusername/gosmart-lint/main/rules/determinism.yaml
-
+rules:
+  - id: no-go-concurrency
+    pattern-either:
+      - pattern: go $F(...)
+      - pattern: |
+          go func() {
+              $BODY
+          }()
+      - pattern: make(chan $TYPE, ...)
+      - pattern: var $X sync.Mutex
+      - pattern: var $X sync.WaitGroup
+      - pattern: var $X sync.RWMutex
+      - pattern: $CHAN <- $VAL
+      - pattern: <-$CHAN
+      - pattern: atomic.$F(...)
+    message: "PVM does not support multi-threading!!!"
+    languages: [go]
+    severity: ERROR
 ```
 
 ## License
