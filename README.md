@@ -30,3 +30,82 @@ The analyzer focuses on detecting patterns that are incompatible with PolkaVM's 
 - **Multi-threading and concurrency**: Detection of goroutines, channels, mutexes, and other concurrency primitives that are incompatible with PolkaVM's execution model
 - File and network operations
 - Floating point operations
+
+## Quick Start
+
+```bash
+# Install Semgrep
+pip install semgrep
+
+# Clone this repository
+git clone https://github.com/yourusername/gosmart-lint.git
+cd gosmart-lint
+
+# Run against example code
+semgrep --config rules/determinism.yaml examples/bad/
+
+# Run all tests
+./scripts/run_tests.sh
+
+```
+
+## Example Detection
+
+```go
+// This code would be flagged as incompatible with PolkaVM:
+func processInParallel(items []string) {
+    var wg sync.WaitGroup
+    for _, item := range items {
+        wg.Add(1)
+        go func(i string) {
+            defer wg.Done()
+            process(i)
+        }(item)
+    }
+    wg.Wait()
+}
+
+// The compatible alternative:
+func processSequentially(items []string) {
+    for _, item := range items {
+        process(item)
+    }
+}
+
+```
+
+## Value Proposition
+
+1. **Development Speed**: Catch incompatibility issues early, avoiding costly late-stage rewrites
+2. **Learning Tool**: Help developers understand the constraints of PolkaVM execution
+3. **CI Integration**: Automatically enforce PolkaVM compatibility in continuous integration
+4. **Documentation**: Rules serve as living documentation of PolkaVM limitations
+
+## Future Work
+
+- Expand rule coverage to other PolkaVM incompatibility patterns
+- Create IDE extensions for real-time feedback
+- Add automatic code transformation suggestions
+- Support additional languages targeting PolkaVM
+
+## Try It Yourself
+
+Set up the tool and run it against your own Go code with:
+
+```yaml
+name: PolkaVM Compatibility Check
+on: [push, pull_request]
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: returntocorp/semgrep-action@v1
+        with:
+          config: https://raw.githubusercontent.com/yourusername/gosmart-lint/main/rules/determinism.yaml
+
+```
+
+## License
+
+MIT
