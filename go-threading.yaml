@@ -1,0 +1,18 @@
+rules:
+  - id: no-go-concurrency
+    pattern-either:
+      - pattern: go $F(...)
+      - pattern: |
+          go func() {
+              $BODY
+          }()
+      - pattern: make(chan $TYPE, ...)
+      - pattern: var $X sync.Mutex
+      - pattern: var $X sync.WaitGroup
+      - pattern: var $X sync.RWMutex
+      - pattern: $CHAN <- $VAL
+      - pattern: <-$CHAN
+      - pattern: atomic.$F(...)
+    message: "PVM does not support multi-threading"
+    languages: [go]
+    severity: ERROR
