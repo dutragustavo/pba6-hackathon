@@ -13,6 +13,6 @@ rules:
       - pattern: $CHAN <- $VAL
       - pattern: <-$CHAN
       - pattern: atomic.$F(...)
-    message: "PVM does not support multi-threading"
+    message: "PVM does not support multi-threading!!!"
     languages: [go]
     severity: ERROR
